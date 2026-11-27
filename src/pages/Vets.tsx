@@ -5,6 +5,7 @@ import { uid } from '../lib/merge';
 import { embedUrl, mapsPlaceLink, mapsSearchLink, placeDetails, PlacesError, searchVets, type PlaceDetails, type SearchResult } from '../lib/places';
 import { getProfile, PROFILE_ID, useCollection, useStore } from '../lib/store';
 import type { Note, Profile, Tri } from '../types';
+import { todayStr } from '../lib/health';
 
 const RADII = [5, 10, 25, 50];
 
@@ -207,8 +208,9 @@ export function VetScorecard({ note }: { note: Note }) {
           </>
         )}
       </dl>
-      {(note.emergency === 'unknown' || note.fearFree === 'unknown' || (insurer && !note.settlement?.[insurerName])) && (
-        <p className="muted small">{t('vet.askClinic')}</p>
+      {note.checkedOn && <p className="muted small">{t('vet.checkedOn', { date: new Date(note.checkedOn + 'T12:00:00').toLocaleDateString(locale) })}</p>}
+      {(!note.emergency || note.emergency === 'unknown' || !note.fearFree || note.fearFree === 'unknown' || (insurer && (note.settlement?.[insurerName] ?? 'unknown') === 'unknown')) && (
+        <CallPrompt note={note} insurerName={insurerName} />
       )}
       {note.placeId && (
         <button className="link-btn" onClick={() => setOpen(!open)}>
@@ -265,6 +267,41 @@ export function VetScorecard({ note }: { note: Note }) {
   );
 }
 
+/** A phone number in free text, normalised for a tel: link. */
+const phoneOf = (s?: string) => {
+  const m = s?.match(/\+?[\d][\d\s().-]{5,}\d/);
+  return m ? m[0].replace(/[^\d+]/g, '') : null;
+};
+
+/** "Call the clinic" with the questions that are still open. */
+function CallPrompt({ note, insurerName }: { note: Note; insurerName: string }) {
+  const { t } = useI18n();
+  const phone = phoneOf(note.contact);
+  const questions = [
+    insurerName && (note.settlement?.[insurerName] ?? 'unknown') === 'unknown' ? t('vet.q.settlement', { insurer: insurerName }) : null,
+    !note.emergency || note.emergency === 'unknown' ? t('vet.q.emergency') : null,
+    !note.fearFree || note.fearFree === 'unknown' ? t('vet.q.fearFree') : null,
+    t('vet.q.puppyPackage'),
+  ].filter(Boolean) as string[];
+  return (
+    <div className="call">
+      <div className="row-between">
+        <p className="small">{t('vet.askClinic')}</p>
+        {phone && (
+          <a className="btn btn-small btn-ok" href={`tel:${phone}`}>
+            📞 {t('vet.call')}
+          </a>
+        )}
+      </div>
+      <ol className="questions small">
+        {questions.map((q) => (
+          <li key={q}>{q}</li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 const TRI: Tri[] = ['unknown', 'yes', 'no'];
 
 function TriSelect({ value, onChange, label }: { value?: Tri; onChange: (v: Tri) => void; label: string }) {
@@ -283,15 +320,18 @@ function TriSelect({ value, onChange, label }: { value?: Tri; onChange: (v: Tri)
 }
 
 /** Extra fields in the edit sheet for a vet clinic option. */
-export function VetFields({ note, set }: { note: Note; set: <K extends keyof Note>(k: K, v: Note[K]) => void }) {
+export function VetFields({ note, update }: { note: Note; update: (patch: Partial<Note>) => void }) {
+  const set = <K extends keyof Note>(k: K, v: Note[K]) => update({ [k]: v } as Partial<Note>);
+  // Answers from the clinic are stamped with today's date.
+  const answer = (patch: Partial<Note>) => update({ ...patch, checkedOn: todayStr() });
   const { t } = useI18n();
   const notes = useCollection('notes');
   const list = insurers(notes).sort((a, b) => Number(b.decision === 'chosen') - Number(a.decision === 'chosen'));
   return (
     <>
       <div className="grid-2">
-        <TriSelect label={`🚨 ${t('vet.emergency')}`} value={note.emergency} onChange={(v) => set('emergency', v)} />
-        <TriSelect label={`🤝 ${t('vet.fearFree')}`} value={note.fearFree} onChange={(v) => set('fearFree', v)} />
+        <TriSelect label={`🚨 ${t('vet.emergency')}`} value={note.emergency} onChange={(v) => answer({ emergency: v })} />
+        <TriSelect label={`🤝 ${t('vet.fearFree')}`} value={note.fearFree} onChange={(v) => answer({ fearFree: v })} />
       </div>
       <div className="grid-2">
         <Field label={t('vet.address')}>
@@ -319,7 +359,7 @@ export function VetFields({ note, set }: { note: Note; set: <K extends keyof Not
                   key={i.id}
                   label={`${name}${i.decision === 'chosen' ? ' ✓' : ''}`}
                   value={note.settlement?.[name]}
-                  onChange={(v) => set('settlement', { ...(note.settlement ?? {}), [name]: v })}
+                  onChange={(v) => answer({ settlement: { ...(note.settlement ?? {}), [name]: v } })}
                 />
               );
             })}

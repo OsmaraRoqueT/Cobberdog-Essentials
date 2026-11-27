@@ -264,7 +264,7 @@ function NoteSheet({ note, isNew, onClose }: { note: Note; isNew: boolean; onClo
             <Field label={t('kb.cons')}>
               <textarea rows={3} value={n.cons ?? ''} onChange={(e) => set('cons', e.target.value)} />
             </Field>
-            {n.category === 'vet' && <VetFields note={n} set={set} />}
+            {n.category === 'vet' && <VetFields note={n} update={(patch) => setN({ ...n, ...patch })} />}
           </>
         )}
         <Field label={isOption ? t('common.notes') : t('kb.content')} hint={t('kb.linksHint')}>

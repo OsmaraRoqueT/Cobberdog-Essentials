@@ -51,6 +51,8 @@ export interface Note extends Base {
   fearFree?: Tri;
   /** Direct settlement (direkte oppgjør) with each insurer, keyed by insurer name. */
   settlement?: Record<string, Tri>;
+  /** When the clinic answers above were last checked (YYYY-MM-DD). Groundwork for a future shared clinic database. */
+  checkedOn?: string;
 
   // Insurance options: answers to the comparison checklist, keyed by criterion id.
   answers?: Record<string, string>;

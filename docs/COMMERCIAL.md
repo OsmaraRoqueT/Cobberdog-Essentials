@@ -20,5 +20,12 @@ Options include a one-off purchase per household or a yearly subscription. For a
 ## 5. Content quality
 Country and breed text are general guidance. Before selling in a country, have a local vet review that country's pack and the vaccination schedule, and date-stamp the content. Breed packs are the main way to grow beyond Cobberdog: each new breed is mostly content, not code.
 
-## 6. Name and brand
+## 6. Shared clinic database (future, a reason to pay)
+Today each household phones its clinics and records direct settlement, emergency cover and handling privately, stamped with the date checked (`checkedOn`). Once there are enough users, pool these answers:
+- A `clinic_facts` table keyed by Google place id and insurer, with each household's answer and date. Show "Direct settlement with Tryg: confirmed by 7 owners, last 3 weeks ago".
+- Only share answers the owner opts in to share. Never share household names or emails.
+- Expire or flag answers older than about 12 months, because clinics change agreements.
+- Ask clinics to confirm or correct their own entries. That's a natural channel for a later B2B offer.
+
+## 7. Name and brand
 The header shows "Cobberdog Essentials" for Cobberdog owners and a generic name otherwise ("Puppy Essentials" / "Valpeappen"). Pick a real brand name and check trademarks and domains before launch.
