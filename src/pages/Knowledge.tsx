@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Empty, Field, Linkified, Sheet } from '../components/ui';
 import { uid } from '../lib/merge';
+import { useI18n, type MessageKey } from '../i18n';
 import { useCollection, useStore } from '../lib/store';
 import { NOTE_CATEGORIES, type Decision, type Note, type NoteCategory } from '../types';
 
-const DECISION_LABEL: Record<Decision, string> = { considering: 'Considering', chosen: 'Chosen ✓', rejected: 'Ruled out' };
 const DECISION_ORDER: Record<Decision, number> = { chosen: 0, considering: 1, rejected: 2 };
 
 export default function Knowledge() {
   const notes = useCollection('notes');
+  const { t } = useI18n();
   const [cat, setCat] = useState<NoteCategory | 'All'>('All');
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState<Note | null>(null);
@@ -31,7 +32,7 @@ export default function Knowledge() {
     id: uid(),
     updatedAt: '',
     title: '',
-    category: cat === 'All' ? (kind === 'option' ? 'Vet' : 'Tips') : cat,
+    category: cat === 'All' ? (kind === 'option' ? 'vet' : 'tips') : cat,
     kind,
     body: '',
     decision: kind === 'option' ? 'considering' : undefined,
@@ -40,31 +41,29 @@ export default function Knowledge() {
   return (
     <div className="stack">
       <div className="row-between">
-        <h1>Knowledge base</h1>
+        <h1>{t('kb.title')}</h1>
         <div className="row-gap">
           <button className="btn" onClick={() => setEditing(blank('option'))}>
-            + Option
+            {t('kb.addOption')}
           </button>
           <button className="btn btn-primary" onClick={() => setEditing(blank('note'))}>
-            + Note
+            {t('kb.addNote')}
           </button>
         </div>
       </div>
-      <p className="muted small">
-        Notes hold research and tips. <strong>Options</strong> are vets, courses, groomers or insurers you're comparing. Mark one as Chosen.
-      </p>
-      <input className="search" type="search" placeholder="Search everything…" value={q} onChange={(e) => setQ(e.target.value)} />
-      <div className="chips scroll-x" role="radiogroup" aria-label="Category">
+      <p className="muted small">{t('kb.intro')}</p>
+      <input className="search" type="search" placeholder={t('kb.search')} value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="chips scroll-x" role="radiogroup" aria-label={t('common.category')}>
         {(['All', ...NOTE_CATEGORIES] as const).map((c) => (
           <button key={c} role="radio" aria-checked={cat === c} className={`chip ${cat === c ? 'chip-on' : ''}`} onClick={() => setCat(c)}>
-            {c}
+            {c === 'All' ? t('common.all') : t(`cat.${c}` as MessageKey)}
           </button>
         ))}
       </div>
 
       {options.length > 0 && (
         <section>
-          <h2 className="section-title">Options being compared</h2>
+          <h2 className="section-title">{t('kb.options')}</h2>
           <div className="stack">
             {options.map((n) => (
               <OptionCard key={n.id} note={n} onEdit={() => setEditing(n)} />
@@ -74,8 +73,8 @@ export default function Knowledge() {
       )}
 
       <section>
-        {options.length > 0 && <h2 className="section-title">Notes</h2>}
-        {plain.length === 0 && options.length === 0 && <Empty>Nothing here yet. Add a note or an option.</Empty>}
+        {options.length > 0 && <h2 className="section-title">{t('kb.notes')}</h2>}
+        {plain.length === 0 && options.length === 0 && <Empty>{t('kb.empty')}</Empty>}
         <div className="stack">
           {plain.map((n) => (
             <NoteCard key={n.id} note={n} onEdit={() => setEditing(n)} />
@@ -89,6 +88,7 @@ export default function Knowledge() {
 }
 
 function NoteCard({ note, onEdit }: { note: Note; onEdit: () => void }) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const long = note.body.length > 220;
   return (
@@ -99,16 +99,16 @@ function NoteCard({ note, onEdit }: { note: Note; onEdit: () => void }) {
           {note.title}
         </h3>
         <button className="link-btn" onClick={onEdit}>
-          Edit
+          {t('common.edit')}
         </button>
       </div>
-      <p className="tag">{note.category}</p>
+      <p className="tag">{t(`cat.${note.category}` as MessageKey)}</p>
       <p className="note-body">
         <Linkified text={expanded || !long ? note.body : note.body.slice(0, 220) + '…'} />
       </p>
       {long && (
         <button className="link-btn" onClick={() => setExpanded(!expanded)}>
-          {expanded ? 'Show less' : 'Read more'}
+          {expanded ? t('common.showLess') : t('common.readMore')}
         </button>
       )}
     </article>
@@ -116,30 +116,31 @@ function NoteCard({ note, onEdit }: { note: Note; onEdit: () => void }) {
 }
 
 function OptionCard({ note, onEdit }: { note: Note; onEdit: () => void }) {
+  const { t } = useI18n();
   const d = note.decision ?? 'considering';
   return (
     <article className={`card option option-${d}`}>
       <div className="row-between">
         <h3>{note.provider || note.title}</h3>
         <button className="link-btn" onClick={onEdit}>
-          Edit
+          {t('common.edit')}
         </button>
       </div>
       <p className="tag">
-        {note.category} · <span className={`decision decision-${d}`}>{DECISION_LABEL[d]}</span>
+        {t(`cat.${note.category}` as MessageKey)} · <span className={`decision decision-${d}`}>{t(`decision.${d}` as MessageKey)}</span>
         {note.rating ? ` · ${'★'.repeat(note.rating)}${'☆'.repeat(5 - note.rating)}` : ''}
       </p>
       {note.provider && note.title && note.title !== note.provider && <p className="muted small">{note.title}</p>}
       <dl className="facts">
         {note.cost && (
           <>
-            <dt>Cost</dt>
+            <dt>{t('common.cost')}</dt>
             <dd>{note.cost}</dd>
           </>
         )}
         {note.contact && (
           <>
-            <dt>Contact</dt>
+            <dt>{t('common.contact')}</dt>
             <dd>
               <Linkified text={note.contact} />
             </dd>
@@ -147,13 +148,13 @@ function OptionCard({ note, onEdit }: { note: Note; onEdit: () => void }) {
         )}
         {note.pros && (
           <>
-            <dt>Pros</dt>
+            <dt>{t('kb.pros')}</dt>
             <dd className="pre">{note.pros}</dd>
           </>
         )}
         {note.cons && (
           <>
-            <dt>Cons</dt>
+            <dt>{t('kb.cons')}</dt>
             <dd className="pre">{note.cons}</dd>
           </>
         )}
@@ -165,7 +166,7 @@ function OptionCard({ note, onEdit }: { note: Note; onEdit: () => void }) {
       )}
       {note.link && (
         <a href={note.link} target="_blank" rel="noreferrer">
-          Website ↗
+          {t('common.website')} ↗
         </a>
       )}
     </article>
@@ -174,12 +175,13 @@ function OptionCard({ note, onEdit }: { note: Note; onEdit: () => void }) {
 
 function NoteSheet({ note, isNew, onClose }: { note: Note; isNew: boolean; onClose: () => void }) {
   const { upsert, remove } = useStore();
+  const { t } = useI18n();
   const [n, setN] = useState<Note>(note);
   const set = <K extends keyof Note>(k: K, v: Note[K]) => setN({ ...n, [k]: v });
   const isOption = n.kind === 'option';
 
   return (
-    <Sheet title={`${isNew ? 'Add' : 'Edit'} ${isOption ? 'option' : 'note'}`} onClose={onClose}>
+    <Sheet title={isOption ? t(isNew ? 'kb.addOptionTitle' : 'kb.editOptionTitle') : t(isNew ? 'kb.addNoteTitle' : 'kb.editNoteTitle')} onClose={onClose}>
       <form
         className="form"
         onSubmit={(e) => {
@@ -190,32 +192,34 @@ function NoteSheet({ note, isNew, onClose }: { note: Note; isNew: boolean; onClo
           onClose();
         }}
       >
-        <Field label="Category">
+        <Field label={t('common.category')}>
           <select value={n.category} onChange={(e) => set('category', e.target.value as NoteCategory)}>
             {NOTE_CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
+              <option key={c} value={c}>
+                {t(`cat.${c}` as MessageKey)}
+              </option>
             ))}
           </select>
         </Field>
         {isOption && (
-          <Field label="Name (clinic, school, groomer…)">
+          <Field label={t('kb.providerName')}>
             <input value={n.provider ?? ''} onChange={(e) => set('provider', e.target.value)} autoFocus />
           </Field>
         )}
-        <Field label={isOption ? 'Short description (optional)' : 'Title'}>
+        <Field label={isOption ? t('kb.shortDesc') : t('kb.noteTitle')}>
           <input value={n.title} onChange={(e) => set('title', e.target.value)} required={!isOption} autoFocus={!isOption} />
         </Field>
         {isOption && (
           <>
             <div className="grid-2">
-              <Field label="Decision">
+              <Field label={t('kb.decision')}>
                 <select value={n.decision ?? 'considering'} onChange={(e) => set('decision', e.target.value as Decision)}>
-                  <option value="considering">Considering</option>
-                  <option value="chosen">Chosen</option>
-                  <option value="rejected">Ruled out</option>
+                  <option value="considering">{t('decision.considering')}</option>
+                  <option value="chosen">{t('decision.chosen')}</option>
+                  <option value="rejected">{t('decision.rejected')}</option>
                 </select>
               </Field>
-              <Field label="Rating">
+              <Field label={t('common.rating')}>
                 <select value={n.rating ?? 0} onChange={(e) => set('rating', Number(e.target.value) || undefined)}>
                   <option value={0}>—</option>
                   {[1, 2, 3, 4, 5].map((r) => (
@@ -227,30 +231,30 @@ function NoteSheet({ note, isNew, onClose }: { note: Note; isNew: boolean; onClo
               </Field>
             </div>
             <div className="grid-2">
-              <Field label="Cost">
-                <input value={n.cost ?? ''} onChange={(e) => set('cost', e.target.value)} placeholder="e.g. 6 weeks for 320" />
+              <Field label={t('common.cost')}>
+                <input value={n.cost ?? ''} onChange={(e) => set('cost', e.target.value)} placeholder={t('kb.costPlaceholder')} />
               </Field>
-              <Field label="Contact">
-                <input value={n.contact ?? ''} onChange={(e) => set('contact', e.target.value)} placeholder="Phone, address" />
+              <Field label={t('common.contact')}>
+                <input value={n.contact ?? ''} onChange={(e) => set('contact', e.target.value)} placeholder={t('kb.contactPlaceholder')} />
               </Field>
             </div>
-            <Field label="Website">
+            <Field label={t('common.website')}>
               <input type="url" value={n.link ?? ''} onChange={(e) => set('link', e.target.value)} placeholder="https://" />
             </Field>
-            <Field label="Pros">
+            <Field label={t('kb.pros')}>
               <textarea rows={3} value={n.pros ?? ''} onChange={(e) => set('pros', e.target.value)} />
             </Field>
-            <Field label="Cons">
+            <Field label={t('kb.cons')}>
               <textarea rows={3} value={n.cons ?? ''} onChange={(e) => set('cons', e.target.value)} />
             </Field>
           </>
         )}
-        <Field label={isOption ? 'Notes' : 'Content'} hint="Paste links too. They become clickable.">
+        <Field label={isOption ? t('common.notes') : t('kb.content')} hint={t('kb.linksHint')}>
           <textarea rows={isOption ? 3 : 8} value={n.body} onChange={(e) => set('body', e.target.value)} />
         </Field>
         {!isOption && (
           <label className="inline-check">
-            <input type="checkbox" checked={Boolean(n.pinned)} onChange={(e) => set('pinned', e.target.checked)} /> Pin to top
+            <input type="checkbox" checked={Boolean(n.pinned)} onChange={(e) => set('pinned', e.target.checked)} /> {t('kb.pin')}
           </label>
         )}
         <div className="row-between">
@@ -259,19 +263,19 @@ function NoteSheet({ note, isNew, onClose }: { note: Note; isNew: boolean; onClo
               type="button"
               className="btn btn-danger"
               onClick={() => {
-                if (confirm('Delete this entry?')) {
+                if (confirm(t('common.confirmDeleteEntry'))) {
                   remove('notes', n.id);
                   onClose();
                 }
               }}
             >
-              Delete
+              {t('common.delete')}
             </button>
           ) : (
             <span />
           )}
           <button className="btn btn-primary" type="submit">
-            Save
+            {t('common.save')}
           </button>
         </div>
       </form>

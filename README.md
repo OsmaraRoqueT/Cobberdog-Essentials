@@ -1,52 +1,60 @@
-# Cobberdog Essentials 🐾
+# Puppy Essentials (Cobberdog Essentials) 🐾
 
-One place for everything about our Australian Cobberdog puppy: the shopping list, research on vets and training courses, breed tips, and training progress.
+One place for everything about a new puppy: shopping list, research on vets and courses, breed tips, training progress, health log and reminders.
 
-It's an installable web app (PWA). It works offline on a phone, and it can sync between everyone in the household.
+It's an installable web app (PWA) that works offline on phones and tablets and can sync between everyone in a household. It's built to be sold as a product: the interface is in **English and Norwegian (bokmål)**, owners choose their **country** and **breed** on first launch, and starter content adapts to both.
 
 ## What's inside
 
 | Section | What it does |
 |---|---|
-| **Home** | Puppy profile, pickup-day countdown, shopping and training progress, chosen vet and course, the next essentials to buy |
-| **Shopping** | About 40 pre-filled puppy items with priority and a tip for each. Tick off as bought, mark "don't need", record cost, store, link and notes |
-| **Knowledge** | Research notes (breed facts, breeder questions, feeding, coat care, first 48 hours) plus **options**: vets, courses, groomers or insurers with pros, cons, rating, cost and a Chosen / Ruled out decision |
-| **Training** | 16 skills with how-to steps and a status (Not started → Learning → Practising → Reliable), a session log, and a socialisation checklist with exposure counters |
-| **Settings** | Household sync, JSON backup export/import, restore starter content |
+| **Home** | Puppy profile and pickup countdown, upcoming reminders, shopping and training progress, chosen vet and course, the next essentials to buy |
+| **Health** | Vaccinations, worming, flea/tick, vet visits, grooming, medication and weight. Includes a **suggested schedule** built from birth and pickup dates and the country's seasonal rules, plus repeating reminders and **Add to calendar** (phone `.ics` or Google Calendar) |
+| **Shopping** | Puppy items with priorities and tips. Country admin items (e.g. Dyreidentitet in Norway) and breed items are added automatically |
+| **Training** | 16 skills with how-to steps and a status, a session log, and a socialisation checklist |
+| **Knowledge** | Research notes plus **options** for comparing vets, courses and insurers (pros, cons, rating, Chosen / Ruled out) |
+| **Settings** | Language (per device), country, breed and currency (per household), a keep-screen-on mode for wall/kitchen tablets, household sync, and backup |
 
-All starter content can be edited or deleted. Health guidance is general, so confirm medical decisions with your vet.
+On screens 900px and wider (tablets, desktops) the layout switches to a side menu with a two-column dashboard.
 
-## Run it locally
+Health guidance is general and every screen says so: confirm medical decisions with a vet.
+
+## Reminders: how they reach you
+
+Reminders are added to the **phone's own calendar**, either as an `.ics` file (iPhone, iPad, Mac, Outlook and most Android phones) or as a Google Calendar link. Each event has an alert at 09:00 the day before. This works on every device with no server, and alerts arrive even if the app is never opened.
+
+Real push notifications are planned for a later phase. They need a hosted backend that sends them on a schedule, and on iPhone they only work after the app is added to the home screen. See [docs/COMMERCIAL.md](docs/COMMERCIAL.md).
+
+## Run it
 
 ```bash
 npm install
 npm run dev
 ```
 
-`npm test` runs the unit tests and `npm run build` produces a static site in `dist/`. You can host it anywhere: GitHub Pages, Netlify or Vercel.
+`npm test` runs the unit tests. `npm run build` produces a static site in `dist/` that can be hosted anywhere.
 
-## Household sync (optional, ~10 minutes)
+## Household sync: one tablet plus phones
 
-Without sync, data stays on the device it was entered on. To share it:
+Without sync, data stays on the device. To share it between a household tablet and phones:
 
-1. Create a free project at [supabase.com](https://supabase.com).
+1. Create a free project at [supabase.com](https://supabase.com). Pick an **EU region** for European users.
 2. Open **SQL Editor**, paste [`supabase/schema.sql`](supabase/schema.sql) and run it.
-3. Under **Authentication → URL Configuration**, add the URL where the app is hosted to *Redirect URLs*, so the email sign-in links work.
-4. Under **Project Settings → API**, copy the *Project URL* and the *anon public* key. Then do one of these:
-   - put them in `.env.local` (see `.env.example`) before building, so nobody needs to type them, **or**
-   - paste them into **Settings → Household sync** in the app on each device.
-5. Sign in with your email (a magic link, no password) and **Create household**. Share the join code with your household. They sign in and **Join**.
+3. Under **Authentication → URL Configuration**, add the hosted app URL to *Redirect URLs*.
+4. Under **Project Settings → API**, copy the *Project URL* and *anon public* key into `.env.local` (see `.env.example`) before building.
+5. On the **tablet**: complete the first-run setup, then go to **Settings**, sign in with email (magic link) and choose **Create household**. Note the join code.
+6. On each **phone**: on the first screen tap **Join a household**, sign in, and enter the join code. The puppy, country and breed come from the household.
 
-How it works: every change is saved on the device first, then pushed to Supabase and streamed live to other members. If two people edit the *same* item, the most recent edit wins. Row Level Security means only household members can read or write its records.
+Every change is saved on the device first and then synced live. If two people edit the same item, the most recent edit wins.
 
-## Project layout
+## Content packs
 
-```
-src/
-  data/seed.ts      starter content (shopping list, notes, skills, socialisation)
-  lib/store.tsx     local-first store + sync engine
-  lib/sync.ts       Supabase client (auth, households, records, realtime)
-  lib/merge.ts      last-write-wins merge (unit tested)
-  pages/            Home, Shopping, Knowledge, Training, Settings
-supabase/schema.sql database schema + security policies
-```
+Starter content is assembled from packs in `src/content/`:
+
+- `generic.ts`: breed- and country-neutral puppy content
+- `countries.ts`: currency, local registration and rules, and seasonal reminders (NO, SE, DK, FI, GB, US, AU, plus "Other")
+- `breeds.ts`: breed packs (Australian Cobberdog, plus "Other / mixed")
+
+To add a breed or country, add a pack. Text is `{ en, nb }`, and English is the fallback. Untouched starter items follow the device language. Items you've edited keep the text they had.
+
+UI strings live in `src/i18n/en.ts` and `nb.ts`. TypeScript and a test make sure every key is translated.

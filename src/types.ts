@@ -21,16 +21,8 @@ export interface ShoppingItem extends Base {
   notes?: string;
 }
 
-export const NOTE_CATEGORIES = [
-  'Breed essentials',
-  'Vet',
-  'Training course',
-  'Breeder & pickup',
-  'Food & nutrition',
-  'Grooming',
-  'Insurance & admin',
-  'Tips',
-] as const;
+/** Category keys are stable ids; labels come from the translation dictionary. */
+export const NOTE_CATEGORIES = ['breed', 'vet', 'course', 'breeder', 'food', 'grooming', 'admin', 'tips'] as const;
 export type NoteCategory = (typeof NOTE_CATEGORIES)[number];
 export type Decision = 'considering' | 'chosen' | 'rejected';
 
@@ -76,7 +68,28 @@ export interface SocialItem extends Base {
   notes?: string;
 }
 
+export type HealthKind = 'vaccine' | 'worming' | 'parasite' | 'vet' | 'weight' | 'grooming' | 'medication' | 'other';
+export type Repeat = 'none' | '2w' | '1m' | '2m' | '3m' | '6m' | '1y' | '3y';
+
+/** A planned reminder (status "planned", has `due`) or something that happened (status "done", has `date`). */
+export interface HealthEntry extends Base {
+  kind: HealthKind;
+  title: string;
+  status: 'planned' | 'done';
+  date?: string;
+  due?: string;
+  repeat?: Repeat;
+  weightKg?: number;
+  notes?: string;
+  /** Set on entries created from the suggested schedule, so they can be explained as suggestions. */
+  suggested?: boolean;
+}
+
+/** Household-wide settings live on the (single) profile record so they sync to every device. */
 export interface Profile extends Base {
+  country?: string;
+  breed?: string;
+  currency?: string;
   name: string;
   breeder: string;
   birthDate: string;
@@ -94,6 +107,7 @@ export interface Collections {
   skills: Skill[];
   sessions: Session[];
   social: SocialItem[];
+  health: HealthEntry[];
 }
 export type CollectionName = keyof Collections;
-export const COLLECTION_NAMES: CollectionName[] = ['profile', 'shopping', 'notes', 'skills', 'sessions', 'social'];
+export const COLLECTION_NAMES: CollectionName[] = ['profile', 'shopping', 'notes', 'skills', 'sessions', 'social', 'health'];

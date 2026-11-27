@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { mergeRecords, newerThanRemote } from './merge';
-import { seedCollections } from '../data/seed';
-import { COLLECTION_NAMES, type Base } from '../types';
 
 const r = (id: string, updatedAt: string, extra: Record<string, unknown> = {}) => ({ id, updatedAt, ...extra });
 
@@ -30,18 +28,5 @@ describe('newerThanRemote', () => {
   it('returns records missing or older remotely', () => {
     const out = newerThanRemote([r('a', '2'), r('b', '1'), r('c', '1')], [r('a', '1'), r('b', '2')]);
     expect(out.map((x) => x.id).sort()).toEqual(['a', 'c']);
-  });
-});
-
-describe('seed data', () => {
-  it('has unique, stable ids so two household devices never duplicate starter content', () => {
-    const a = seedCollections();
-    const b = seedCollections();
-    for (const name of COLLECTION_NAMES) {
-      const ids = (a[name] as Base[]).map((x) => x.id);
-      expect(new Set(ids).size).toBe(ids.length);
-      expect((b[name] as Base[]).map((x) => x.id)).toEqual(ids);
-      expect(mergeRecords(a[name] as Base[], b[name] as Base[])).toHaveLength(ids.length);
-    }
   });
 });

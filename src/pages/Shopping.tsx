@@ -1,21 +1,23 @@
 import { useMemo, useState } from 'react';
 import { Chips, Empty, Field, groupBy, Sheet } from '../components/ui';
 import { uid } from '../lib/merge';
+import { useI18n } from '../i18n';
 import { useCollection, useStore } from '../lib/store';
 import type { Priority, ShoppingItem, ShoppingStatus } from '../types';
+import type { MessageKey } from '../i18n';
 
 type Filter = 'todo' | 'bought' | 'all';
-const FILTERS = [
-  { value: 'todo', label: 'To buy' },
-  { value: 'bought', label: 'Bought' },
-  { value: 'all', label: 'All' },
-] as const;
-const PRIORITY_LABEL: Record<Priority, string> = { essential: 'Essential', recommended: 'Recommended', nice: 'Nice to have' };
 const PRIORITY_ORDER: Record<Priority, number> = { essential: 0, recommended: 1, nice: 2 };
 
 export default function Shopping() {
   const items = useCollection('shopping');
   const { upsert } = useStore();
+  const { t } = useI18n();
+  const FILTERS = [
+    { value: 'todo', label: t('shop.todo') },
+    { value: 'bought', label: t('shop.bought') },
+    { value: 'all', label: t('common.all') },
+  ] as const;
   const [filter, setFilter] = useState<Filter>('todo');
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState<ShoppingItem | 'new' | null>(null);
@@ -32,15 +34,15 @@ export default function Shopping() {
   return (
     <div className="stack">
       <div className="row-between">
-        <h1>Shopping list</h1>
+        <h1>{t('shop.title')}</h1>
         <button className="btn btn-primary" onClick={() => setEditing('new')}>
-          + Add
+          + {t('common.add')}
         </button>
       </div>
-      <input className="search" type="search" placeholder="Search items, tips, stores…" value={q} onChange={(e) => setQ(e.target.value)} />
-      <Chips label="Filter" options={FILTERS} value={filter} onChange={setFilter} />
+      <input className="search" type="search" placeholder={t('shop.search')} value={q} onChange={(e) => setQ(e.target.value)} />
+      <Chips label={t('common.status')} options={FILTERS} value={filter} onChange={setFilter} />
 
-      {visible.length === 0 && <Empty>{filter === 'todo' ? 'Nothing left to buy here. 🎉' : 'No items match.'}</Empty>}
+      {visible.length === 0 && <Empty>{filter === 'todo' ? t('shop.nothingLeft') : t('shop.noMatch')}</Empty>}
 
       {groupBy(visible, (i) => i.category).map(([cat, list]) => (
         <section key={cat} className="card">
@@ -49,11 +51,11 @@ export default function Shopping() {
             {list.map((i) => (
               <li key={i.id} className={i.status === 'bought' ? 'done' : i.status === 'skip' ? 'skipped' : ''}>
                 <div className="item-main">
-                  <input type="checkbox" aria-label={`Bought ${i.name}`} checked={i.status === 'bought'} onChange={() => toggle(i)} />
+                  <input type="checkbox" aria-label={`${t('shop.bought')}: ${i.name}`} checked={i.status === 'bought'} onChange={() => toggle(i)} />
                   <button className="item-title" onClick={() => setOpen(open === i.id ? null : i.id)}>
                     {i.name}
                   </button>
-                  <span className={`badge badge-${i.priority}`}>{PRIORITY_LABEL[i.priority]}</span>
+                  <span className={`badge badge-${i.priority}`}>{t(`prio.${i.priority}` as MessageKey)}</span>
                 </div>
                 {open === i.id && (
                   <div className="item-detail">
@@ -69,19 +71,19 @@ export default function Shopping() {
                     {i.link && (
                       <p>
                         <a href={i.link} target="_blank" rel="noreferrer">
-                          Product link ↗
+                          {t('shop.productLink')}
                         </a>
                       </p>
                     )}
                     <div className="row-gap">
                       <button className="btn btn-small" onClick={() => setEditing(i)}>
-                        Edit
+                        {t('common.edit')}
                       </button>
                       <button
                         className="btn btn-small"
                         onClick={() => upsert('shopping', { ...i, status: i.status === 'skip' ? 'todo' : 'skip' })}
                       >
-                        {i.status === 'skip' ? 'Un-skip' : "Don't need"}
+                        {i.status === 'skip' ? t('shop.unskip') : t('shop.skip')}
                       </button>
                     </div>
                   </div>
@@ -101,13 +103,14 @@ export default function Shopping() {
 
 function ItemSheet({ item, categories, onClose }: { item?: ShoppingItem; categories: string[]; onClose: () => void }) {
   const { upsert, remove } = useStore();
+  const { t } = useI18n();
   const [it, setIt] = useState<ShoppingItem>(
     item ?? { id: uid(), updatedAt: '', name: '', category: categories[0] ?? 'Other', priority: 'recommended', status: 'todo' },
   );
   const set = <K extends keyof ShoppingItem>(k: K, v: ShoppingItem[K]) => setIt({ ...it, [k]: v });
 
   return (
-    <Sheet title={item ? 'Edit item' : 'Add item'} onClose={onClose}>
+    <Sheet title={item ? t('shop.editItem') : t('shop.addItem')} onClose={onClose}>
       <form
         className="form"
         onSubmit={(e) => {
@@ -117,11 +120,11 @@ function ItemSheet({ item, categories, onClose }: { item?: ShoppingItem; categor
           onClose();
         }}
       >
-        <Field label="Item">
+        <Field label={t('shop.item')}>
           <input required value={it.name} onChange={(e) => set('name', e.target.value)} autoFocus />
         </Field>
         <div className="grid-2">
-          <Field label="Category">
+          <Field label={t('common.category')}>
             <input list="shop-cats" value={it.category} onChange={(e) => set('category', e.target.value)} />
             <datalist id="shop-cats">
               {categories.map((c) => (
@@ -129,23 +132,23 @@ function ItemSheet({ item, categories, onClose }: { item?: ShoppingItem; categor
               ))}
             </datalist>
           </Field>
-          <Field label="Priority">
+          <Field label={t('common.priority')}>
             <select value={it.priority} onChange={(e) => set('priority', e.target.value as Priority)}>
-              <option value="essential">Essential</option>
-              <option value="recommended">Recommended</option>
-              <option value="nice">Nice to have</option>
+              <option value="essential">{t('prio.essential')}</option>
+              <option value="recommended">{t('prio.recommended')}</option>
+              <option value="nice">{t('prio.nice')}</option>
             </select>
           </Field>
         </div>
         <div className="grid-2">
-          <Field label="Status">
+          <Field label={t('common.status')}>
             <select value={it.status} onChange={(e) => set('status', e.target.value as ShoppingStatus)}>
-              <option value="todo">To buy</option>
-              <option value="bought">Bought</option>
-              <option value="skip">Don't need</option>
+              <option value="todo">{t('shop.todo')}</option>
+              <option value="bought">{t('shop.bought')}</option>
+              <option value="skip">{t('shop.skip')}</option>
             </select>
           </Field>
-          <Field label="Cost">
+          <Field label={t('common.cost')}>
             <input
               type="number"
               inputMode="decimal"
@@ -156,17 +159,17 @@ function ItemSheet({ item, categories, onClose }: { item?: ShoppingItem; categor
             />
           </Field>
         </div>
-        <Field label="Store">
+        <Field label={t('common.store')}>
           <input value={it.store ?? ''} onChange={(e) => set('store', e.target.value)} />
         </Field>
-        <Field label="Link">
+        <Field label={t('common.link')}>
           <input type="url" value={it.link ?? ''} onChange={(e) => set('link', e.target.value)} placeholder="https://" />
         </Field>
-        <Field label="Tip / why">
+        <Field label={t('shop.tip')}>
           <textarea rows={2} value={it.tip ?? ''} onChange={(e) => set('tip', e.target.value)} />
         </Field>
-        <Field label="My notes">
-          <textarea rows={2} value={it.notes ?? ''} onChange={(e) => set('notes', e.target.value)} placeholder="Size bought, what worked, what didn't…" />
+        <Field label={t('common.myNotes')}>
+          <textarea rows={2} value={it.notes ?? ''} onChange={(e) => set('notes', e.target.value)} placeholder={t('shop.notesPlaceholder')} />
         </Field>
         <div className="row-between">
           {item ? (
@@ -174,19 +177,19 @@ function ItemSheet({ item, categories, onClose }: { item?: ShoppingItem; categor
               type="button"
               className="btn btn-danger"
               onClick={() => {
-                if (confirm(`Delete "${it.name}"?`)) {
+                if (confirm(t('common.confirmDelete', { name: it.name }))) {
                   remove('shopping', it.id);
                   onClose();
                 }
               }}
             >
-              Delete
+              {t('common.delete')}
             </button>
           ) : (
             <span />
           )}
           <button className="btn btn-primary" type="submit">
-            Save
+            {t('common.save')}
           </button>
         </div>
       </form>

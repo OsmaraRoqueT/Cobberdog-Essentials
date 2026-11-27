@@ -1,31 +1,164 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Field } from '../components/ui';
+import { buildSeed } from '../content';
+import { BREEDS } from '../content/breeds';
+import { COUNTRIES, countryByCode, countryName, CURRENCIES } from '../content/countries';
+import { LANGS, pick, useI18n, type Lang } from '../i18n';
 import { mergeRecords } from '../lib/merge';
-import { seedCollections } from '../data/seed';
-import { useStore } from '../lib/store';
+import { getProfile, PROFILE_ID, useStore } from '../lib/store';
 import * as sync from '../lib/sync';
-import { COLLECTION_NAMES, type Base, type Collections } from '../types';
+import { COLLECTION_NAMES, type Base, type Collections, type Profile } from '../types';
 
 export default function Settings() {
+  const { t } = useI18n();
   return (
-    <div className="stack">
-      <h1>Settings</h1>
+    <div className="dash">
+      <h1 className="span-2">{t('settings.title')}</h1>
+      <GeneralCard />
       <SyncCard />
       <BackupCard />
-      <p className="muted small">
-        Health and care tips in this app are general guidance. Always confirm vaccination, worming and medical decisions with your vet.
-      </p>
+      <p className="muted small span-2">{t('common.vetDisclaimer')}</p>
     </div>
   );
 }
 
+const WAKE_KEY = 'cobberdog:keep-awake';
+
+/** Screen Wake Lock for a dedicated kitchen/wall tablet. Re-acquired when the tab becomes visible again. */
+function useKeepAwake(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled || !('wakeLock' in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    const acquire = () =>
+      navigator.wakeLock
+        .request('screen')
+        .then((l) => (lock = l))
+        .catch(() => undefined);
+    const onVisible = () => document.visibilityState === 'visible' && void acquire();
+    void acquire();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      void lock?.release();
+    };
+  }, [enabled]);
+}
+
+const readAwake = () => {
+  try {
+    return localStorage.getItem(WAKE_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
+/** Mounted once at app level so the screen stays on whichever tab is showing. */
+export function KeepAwake() {
+  const [on, setOn] = useState(readAwake);
+  useEffect(() => {
+    const onChange = () => setOn(readAwake());
+    window.addEventListener('keep-awake-change', onChange);
+    return () => window.removeEventListener('keep-awake-change', onChange);
+  }, []);
+  useKeepAwake(on);
+  return null;
+}
+
+function GeneralCard() {
+  const { t, lang, setLang } = useI18n();
+  const { data, upsert } = useStore();
+  const profile = getProfile(data);
+  const [awake, setAwake] = useState(readAwake);
+  const supported = 'wakeLock' in navigator;
+
+  const update = (patch: Partial<Profile>) => {
+    const base: Profile = profile ?? {
+      id: PROFILE_ID,
+      updatedAt: '',
+      name: '',
+      breeder: '',
+      birthDate: '',
+      arrivalDate: '',
+      size: '',
+      colour: '',
+      microchip: '',
+      notes: '',
+    };
+    upsert('profile', { ...base, ...patch });
+  };
+
+  return (
+    <section className="card form">
+      <h2>{t('settings.general')}</h2>
+      <Field label={t('settings.language')}>
+        <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
+          {LANGS.map((l) => (
+            <option key={l.value} value={l.value}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <div className="grid-2">
+        <Field label={t('settings.country')}>
+          <select
+            value={profile?.country ?? 'XX'}
+            onChange={(e) => update({ country: e.target.value, currency: countryByCode(e.target.value).currency })}
+          >
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {countryName(c.code, lang)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t('settings.currency')}>
+          <select value={profile?.currency ?? countryByCode(profile?.country).currency} onChange={(e) => update({ currency: e.target.value })}>
+            {CURRENCIES.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+      <Field label={t('settings.breed')}>
+        <select value={profile?.breed ?? 'other'} onChange={(e) => update({ breed: e.target.value })}>
+          {BREEDS.map((b) => (
+            <option key={b.id} value={b.id}>
+              {pick(b.name, lang)}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <label className="inline-check">
+        <input
+          type="checkbox"
+          checked={awake}
+          disabled={!supported}
+          onChange={(e) => {
+            setAwake(e.target.checked);
+            try {
+              localStorage.setItem(WAKE_KEY, e.target.checked ? '1' : '0');
+            } catch {
+              /* ignore */
+            }
+            window.dispatchEvent(new Event('keep-awake-change'));
+          }}
+        />
+        <span>{t('settings.keepAwake')}</span>
+      </label>
+      {!supported && <p className="muted small">{t('settings.keepAwakeUnsupported')}</p>}
+    </section>
+  );
+}
+
 function SyncCard() {
+  const { t } = useI18n();
   const { syncStatus, syncError, household, userEmail, syncNow, refreshSync, setHousehold } = useStore();
   const cfg = sync.getSyncConfig();
   const [url, setUrl] = useState(cfg?.url ?? '');
   const [key, setKey] = useState(cfg?.anonKey ?? '');
   const [email, setEmail] = useState('');
-  const [hhName, setHhName] = useState('Our Cobberdog family');
+  const [hhName, setHhName] = useState(t('settings.householdDefault'));
   const [code, setCode] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -44,22 +177,16 @@ function SyncCard() {
 
   return (
     <section className="card form">
-      <h2>Household sync</h2>
-      <p className="muted small">
-        Everything is saved on this device first, so the app works offline. Turn on sync to share one puppy record with your household. Edits merge and the most
-        recent change wins.
-      </p>
+      <h2>{t('settings.syncTitle')}</h2>
+      <p className="muted small">{t('settings.syncIntro')}</p>
 
       {!cfg && (
         <>
-          <p className="small">
-            Step 1: create a free Supabase project and run <code>supabase/schema.sql</code> (see README). Then paste the project URL and anon key here. Each
-            household member enters these once.
-          </p>
-          <Field label="Supabase project URL">
+          <p className="small">{t('settings.syncStep1')}</p>
+          <Field label={t('settings.supabaseUrl')}>
             <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://xyz.supabase.co" />
           </Field>
-          <Field label="Supabase anon (public) key">
+          <Field label={t('settings.supabaseKey')}>
             <input value={key} onChange={(e) => setKey(e.target.value)} />
           </Field>
           <button
@@ -70,7 +197,7 @@ function SyncCard() {
               window.location.reload();
             }}
           >
-            Connect
+            {t('settings.connect')}
           </button>
         </>
       )}
@@ -82,36 +209,36 @@ function SyncCard() {
             e.preventDefault();
             void run(async () => {
               await sync.sendMagicLink(email.trim());
-              setMsg(`Check ${email.trim()} for a sign-in link. Open it on this device.`);
+              setMsg(t('settings.checkEmail', { email: email.trim() }));
             });
           }}
         >
-          <Field label="Your email" hint="We'll email you a one-time sign-in link. No password needed.">
+          <Field label={t('settings.email')} hint={t('settings.emailHint')}>
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
           <button className="btn btn-primary" disabled={busy}>
-            Send sign-in link
+            {t('settings.sendLink')}
           </button>
         </form>
       )}
 
       {cfg && syncStatus === 'no-household' && (
         <>
-          <p className="small">Signed in as {userEmail}. Create a household, or join one with a code from a household member.</p>
+          <p className="small">{t('settings.signedInAs', { email: userEmail ?? '' })}</p>
           <div className="grid-2">
-            <Field label="New household name">
+            <Field label={t('settings.newHousehold')}>
               <input value={hhName} onChange={(e) => setHhName(e.target.value)} />
             </Field>
             <button className="btn btn-primary align-end" disabled={busy || !hhName} onClick={() => run(async () => setHousehold(await sync.createHousehold(hhName)))}>
-              Create
+              {t('settings.create')}
             </button>
           </div>
           <div className="grid-2">
-            <Field label="Join code">
-              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g. 3FA9C21B" />
+            <Field label={t('settings.joinCode')}>
+              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="3FA9C21B" />
             </Field>
             <button className="btn align-end" disabled={busy || !code} onClick={() => run(async () => setHousehold(await sync.joinHousehold(code)))}>
-              Join
+              {t('settings.join')}
             </button>
           </div>
         </>
@@ -120,21 +247,19 @@ function SyncCard() {
       {cfg && household && userEmail && (
         <>
           <dl className="facts">
-            <dt>Household</dt>
+            <dt>{t('settings.household')}</dt>
             <dd>{household.name}</dd>
-            <dt>Join code</dt>
+            <dt>{t('settings.joinCode')}</dt>
             <dd>
               <code className="big-code">{household.join_code}</code>
             </dd>
-            <dt>Signed in</dt>
+            <dt>{t('settings.signedIn')}</dt>
             <dd>{userEmail}</dd>
-            <dt>Status</dt>
-            <dd>{syncStatus}</dd>
           </dl>
-          <p className="muted small">Share the join code only with people you want to see and edit your puppy's records.</p>
+          <p className="muted small">{t('settings.shareCode')}</p>
           <div className="row-gap">
             <button className="btn btn-primary" disabled={busy || syncStatus === 'syncing'} onClick={() => run(syncNow)}>
-              Sync now
+              {t('settings.syncNow')}
             </button>
             <button
               className="btn"
@@ -146,27 +271,27 @@ function SyncCard() {
                 })
               }
             >
-              Sign out
+              {t('settings.signOut')}
             </button>
           </div>
         </>
       )}
 
-      {syncError && <p className="error">Sync problem: {syncError}</p>}
+      {syncError && <p className="error">{t('settings.syncProblem', { error: syncError })}</p>}
       {msg && <p className="notice">{msg}</p>}
 
       {cfg && !sync.configFromEnv() && (
         <button
           className="link-btn"
           onClick={() => {
-            if (!confirm('Disconnect sync on this device? Your local data stays.')) return;
+            if (!confirm(t('settings.disconnectConfirm'))) return;
             void sync.signOut().finally(() => {
               sync.saveSyncConfig(null);
               window.location.reload();
             });
           }}
         >
-          Disconnect Supabase on this device
+          {t('settings.disconnect')}
         </button>
       )}
     </section>
@@ -174,17 +299,18 @@ function SyncCard() {
 }
 
 function BackupCard() {
+  const { t, lang } = useI18n();
   const { data, replaceAll } = useStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
   const exportJson = () => {
-    const blob = new Blob([JSON.stringify({ app: 'cobberdog-essentials', version: 1, exportedAt: new Date().toISOString(), data }, null, 2)], {
+    const blob = new Blob([JSON.stringify({ app: 'cobberdog-essentials', version: 2, exportedAt: new Date().toISOString(), data }, null, 2)], {
       type: 'application/json',
     });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `cobberdog-backup-${new Date().toLocaleDateString('en-CA')}.json`;
+    a.download = `puppy-backup-${new Date().toLocaleDateString('en-CA')}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -203,22 +329,22 @@ function BackupCard() {
         (next[name] as Base[]) = mergeRecords(next[name] as Base[], valid);
       }
       replaceAll(next as Collections);
-      setMsg(`Imported ${count} records (newer versions kept).`);
+      setMsg(t('settings.imported', { n: count }));
     } catch {
-      setMsg('That file could not be read as a Cobberdog backup.');
+      setMsg(t('settings.importFailed'));
     }
   };
 
   return (
     <section className="card form">
-      <h2>Backup</h2>
-      <p className="muted small">Download a copy of everything. Recommended even with sync turned on.</p>
+      <h2>{t('settings.backup')}</h2>
+      <p className="muted small">{t('settings.backupIntro')}</p>
       <div className="row-gap">
         <button className="btn btn-primary" onClick={exportJson}>
-          Export backup
+          {t('settings.export')}
         </button>
         <button className="btn" onClick={() => fileRef.current?.click()}>
-          Import backup
+          {t('settings.import')}
         </button>
         <input
           ref={fileRef}
@@ -236,9 +362,10 @@ function BackupCard() {
       <button
         className="link-btn danger"
         onClick={() => {
-          if (!confirm('Restore all starter content you deleted or edited? Your own added items are kept.')) return;
+          if (!confirm(t('settings.restoreConfirm'))) return;
           // Re-stamp seed records so they win over local edits/deletions.
-          const seed = seedCollections();
+          const p = getProfile(data);
+          const seed = buildSeed({ lang, country: p?.country, breed: p?.breed });
           const stamp = new Date().toISOString();
           const next = { ...data };
           for (const name of COLLECTION_NAMES) {
@@ -246,10 +373,10 @@ function BackupCard() {
             (next[name] as Base[]) = mergeRecords(next[name] as Base[], restamped);
           }
           replaceAll(next);
-          setMsg('Starter content restored.');
+          setMsg(t('settings.restored'));
         }}
       >
-        Restore starter content
+        {t('settings.restore')}
       </button>
     </section>
   );

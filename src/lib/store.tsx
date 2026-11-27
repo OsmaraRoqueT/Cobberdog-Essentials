@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { seedCollections } from '../data/seed';
+import { applySeed, buildSeed, isPristineSeed } from '../content';
+import { useI18n, type Lang } from '../i18n';
 import { COLLECTION_NAMES, type Base, type CollectionName, type Collections } from '../types';
 import { mergeRecords, newerThanRemote, now } from './merge';
 import * as sync from './sync';
@@ -8,9 +9,16 @@ const DATA_KEY = 'cobberdog:data';
 
 export type SyncStatus = 'local-only' | 'signed-out' | 'no-household' | 'syncing' | 'synced' | 'offline' | 'error';
 
-/** Stored data merged over the seed, so seed items added in later app versions appear automatically. */
-export function loadData(): Collections {
-  const seed = seedCollections();
+export const PROFILE_ID = 'puppy';
+export const getProfile = (data: Collections) => data.profile.find((p) => p.id === PROFILE_ID && !p.deleted);
+
+/** Current seed (for this language + the household's country/breed) laid under the user's data. */
+export function withSeed(data: Collections, lang: Lang): Collections {
+  const p = getProfile(data);
+  return applySeed(data, buildSeed({ lang, country: p?.country, breed: p?.breed }));
+}
+
+function loadData(lang: Lang): Collections {
   let stored: Partial<Collections> = {};
   try {
     const raw = localStorage.getItem(DATA_KEY);
@@ -18,11 +26,9 @@ export function loadData(): Collections {
   } catch {
     /* corrupted or unavailable storage — start from seed */
   }
-  const out = {} as Collections;
-  for (const name of COLLECTION_NAMES) {
-    (out[name] as Base[]) = mergeRecords(seed[name] as Base[], (stored[name] as Base[]) ?? []);
-  }
-  return out;
+  const base = {} as Collections;
+  for (const name of COLLECTION_NAMES) (base[name] as Base[]) = (stored[name] as Base[]) ?? [];
+  return withSeed(base, lang);
 }
 
 function persist(data: Collections) {
@@ -50,7 +56,10 @@ interface StoreApi {
 const StoreContext = createContext<StoreApi | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<Collections>(loadData);
+  const { lang } = useI18n();
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  const [data, setData] = useState<Collections>(() => loadData(lang));
   const dataRef = useRef(data);
   dataRef.current = data;
 
@@ -61,11 +70,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const syncTimer = useRef<number | undefined>(undefined);
   const syncing = useRef(false);
 
-  const commit = useCallback((next: Collections) => {
+  const commit = useCallback((raw: Collections) => {
+    const next = withSeed(raw, langRef.current);
     dataRef.current = next;
     setData(next);
     persist(next);
   }, []);
+
+  const profile = getProfile(data);
+  useEffect(() => {
+    commit(dataRef.current);
+  }, [lang, profile?.country, profile?.breed, commit]);
 
   const syncNow = useCallback(async () => {
     const h = household;
@@ -84,7 +99,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       for (const name of COLLECTION_NAMES) {
         const theirs = remote.filter((r) => r.collection === name).map((r) => r.record);
         (merged[name] as Base[]) = mergeRecords(current[name] as Base[], theirs);
-        for (const record of newerThanRemote(current[name] as Base[], theirs)) toPush.push({ collection: name, record });
+        // Untouched starter content is generated on each device in its own language; never upload it.
+        const local = (current[name] as Base[]).filter((r) => !isPristineSeed(r));
+        for (const record of newerThanRemote(local, theirs)) toPush.push({ collection: name, record });
       }
       await sync.pushRecords(h.id, toPush);
       // Keep edits made while we were awaiting the network.
