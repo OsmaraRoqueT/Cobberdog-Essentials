@@ -48,6 +48,7 @@ export function Chips<T extends string>({
     <div className="chips" role="radiogroup" aria-label={label}>
       {options.map((o) => (
         <button
+          type="button"
           key={o.value}
           role="radio"
           aria-checked={value === o.value}

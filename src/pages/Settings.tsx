@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Field } from '../components/ui';
+import { Chips, Field } from '../components/ui';
 import { buildSeed } from '../content';
 import { BREEDS } from '../content/breeds';
 import { COUNTRIES, countryByCode, countryName, CURRENCIES } from '../content/countries';
@@ -157,9 +157,6 @@ function SyncCard() {
   const cfg = sync.getSyncConfig();
   const [url, setUrl] = useState(cfg?.url ?? '');
   const [key, setKey] = useState(cfg?.anonKey ?? '');
-  const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
-  const [otp, setOtp] = useState('');
   const [hhName, setHhName] = useState(t('settings.householdDefault'));
   const [code, setCode] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
@@ -204,46 +201,9 @@ function SyncCard() {
         </>
       )}
 
-      {cfg && syncStatus === 'signed-out' && (
-        <form
-          className="form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void run(async () => {
-              await sync.sendMagicLink(email.trim());
-              setSent(true);
-              setMsg(t('settings.checkEmail', { email: email.trim() }));
-            });
-          }}
-        >
-          <Field label={t('settings.email')} hint={t('settings.emailHint')}>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          </Field>
-          <button className={`btn ${sent ? '' : 'btn-primary'}`} disabled={busy}>
-            {t('settings.sendLink')}
-          </button>
-        </form>
-      )}
+      {cfg && syncStatus === 'signed-out' && <AuthForm />}
 
-      {cfg && syncStatus === 'signed-out' && sent && (
-        <form
-          className="form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void run(async () => {
-              await sync.verifyCode(email.trim(), otp);
-              await refreshSync();
-            });
-          }}
-        >
-          <Field label={t('settings.code')} hint={t('settings.codeHint')}>
-            <input inputMode="numeric" autoComplete="one-time-code" required value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="123456" />
-          </Field>
-          <button className="btn btn-primary" disabled={busy || otp.replace(/\s/g, '').length < 6}>
-            {t('settings.verifyCode')}
-          </button>
-        </form>
-      )}
+      {cfg && userEmail && sync.isRecovery() && <NewPasswordForm />}
 
       {cfg && syncStatus === 'no-household' && (
         <>
@@ -318,6 +278,131 @@ function SyncCard() {
         </button>
       )}
     </section>
+  );
+}
+
+type AuthMode = 'signin' | 'signup' | 'reset';
+
+/** Email + password. Works inside home-screen apps; email links are only needed once (confirm / reset) and can open in any browser. */
+function AuthForm() {
+  const { t } = useI18n();
+  const { refreshSync } = useStore();
+  const [mode, setMode] = useState<AuthMode>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [msg, setMsg] = useState<{ kind: 'notice' | 'error'; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const explain = (e: unknown): string => {
+    const m = e instanceof Error ? e.message : String(e);
+    if (m === 'already-registered' || /already registered/i.test(m)) return t('auth.errExists');
+    if (/invalid login credentials/i.test(m)) return t('auth.errInvalid');
+    if (/email not confirmed/i.test(m)) return t('auth.errUnconfirmed');
+    if (/rate limit|too many|security purposes/i.test(m)) return t('auth.errRate');
+    if (/password/i.test(m) && /(short|least|weak)/i.test(m)) return t('auth.errWeak');
+    return m;
+  };
+
+  const submit = async () => {
+    setBusy(true);
+    setMsg(null);
+    const mail = email.trim();
+    try {
+      if (mode === 'signin') {
+        await sync.signInWithPassword(mail, password);
+        await refreshSync();
+      } else if (mode === 'signup') {
+        const signedIn = await sync.signUp(mail, password);
+        if (signedIn) await refreshSync();
+        else {
+          setMsg({ kind: 'notice', text: t('auth.confirmSent', { email: mail }) });
+          setMode('signin');
+        }
+      } else {
+        await sync.sendPasswordReset(mail);
+        setMsg({ kind: 'notice', text: t('auth.resetSent', { email: mail }) });
+        setMode('signin');
+      }
+    } catch (e) {
+      setMsg({ kind: 'error', text: explain(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const MODES = [
+    { value: 'signin', label: t('auth.signIn') },
+    { value: 'signup', label: t('auth.createAccount') },
+  ] as const;
+
+  return (
+    <form
+      className="form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submit();
+      }}
+    >
+      {mode !== 'reset' && <Chips label={t('auth.signIn')} options={MODES} value={mode} onChange={(m) => (setMode(m), setMsg(null))} />}
+      {mode === 'signup' && <p className="muted small">{t('auth.signupIntro')}</p>}
+      {mode === 'reset' && <p className="muted small">{t('auth.resetIntro')}</p>}
+      <Field label={t('settings.email')}>
+        <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+      </Field>
+      {mode !== 'reset' && (
+        <Field label={t('auth.password')} hint={mode === 'signup' ? t('auth.passwordHint') : undefined}>
+          <input
+            type="password"
+            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            required
+            minLength={mode === 'signup' ? 8 : undefined}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </Field>
+      )}
+      <button className="btn btn-primary" disabled={busy}>
+        {mode === 'signin' ? t('auth.signIn') : mode === 'signup' ? t('auth.createAccount') : t('auth.sendReset')}
+      </button>
+      {mode === 'signin' && (
+        <button type="button" className="link-btn" onClick={() => (setMode('reset'), setMsg(null))}>
+          {t('auth.forgot')}
+        </button>
+      )}
+      {mode === 'reset' && (
+        <button type="button" className="link-btn" onClick={() => (setMode('signin'), setMsg(null))}>
+          {t('auth.backToSignIn')}
+        </button>
+      )}
+      {msg && <p className={msg.kind}>{msg.text}</p>}
+    </form>
+  );
+}
+
+function NewPasswordForm() {
+  const { t } = useI18n();
+  const [password, setPassword] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  if (done) return <p className="notice">{t('auth.passwordUpdated')}</p>;
+  return (
+    <form
+      className="form card-inset"
+      onSubmit={(e) => {
+        e.preventDefault();
+        sync
+          .updatePassword(password)
+          .then(() => setDone(true))
+          .catch((err) => setMsg(err instanceof Error ? err.message : String(err)));
+      }}
+    >
+      <h3>{t('auth.newPasswordTitle')}</h3>
+      <Field label={t('auth.newPassword')} hint={t('auth.passwordHint')}>
+        <input type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+      </Field>
+      <button className="btn btn-primary">{t('auth.savePassword')}</button>
+      {msg && <p className="error">{msg}</p>}
+    </form>
   );
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { breedById } from './content/breeds';
 import { pick, useI18n, type MessageKey } from './i18n';
 import { getProfile, useStore } from './lib/store';
+import { isRecovery } from './lib/sync';
 import Health from './pages/Health';
 import Home from './pages/Home';
 import Knowledge from './pages/Knowledge';
@@ -21,6 +22,7 @@ const TABS = [
 export type TabId = (typeof TABS)[number]['id'];
 
 function readTab(): TabId {
+  if (isRecovery()) return 'settings';
   const h = window.location.hash.replace('#', '');
   return (TABS.find((t) => t.id === h)?.id ?? 'home') as TabId;
 }

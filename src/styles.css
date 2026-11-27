@@ -242,3 +242,4 @@ code { background: var(--brand-soft); padding: 0 4px; border-radius: 4px; font-s
   .hero h1 { font-size: 2rem; }
   .btn, .chip, .item-title { font-size: 1.02rem; }
 }
+.card-inset { border: 1px solid var(--border); border-radius: 12px; padding: 12px; }

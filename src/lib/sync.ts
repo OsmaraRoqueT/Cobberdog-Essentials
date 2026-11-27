@@ -72,19 +72,51 @@ export async function getAuthSession(): Promise<AuthSession | null> {
   return data.session;
 }
 
-export async function sendMagicLink(email: string) {
+/** Where confirmation and password-reset links should land: the app itself, without any #tab. */
+const appUrl = () => window.location.href.split('#')[0].split('?')[0];
+
+/**
+ * Captured at load, before supabase-js consumes the URL: the user arrived from a password-reset email.
+ * The reset link opens in the browser (also on iPhone/iPad), signs in there, and we ask for a new password.
+ */
+const arrivedForRecovery = typeof window !== 'undefined' && /type=recovery/.test(window.location.hash + window.location.search);
+let recoveryPending = arrivedForRecovery;
+export const isRecovery = () => recoveryPending;
+export const clearRecovery = () => {
+  recoveryPending = false;
+};
+
+/** Create an account. Returns true if signed in straight away, false if the email must be confirmed first. */
+export async function signUp(email: string, password: string): Promise<boolean> {
   const c = getClient();
   if (!c) throw new Error('Sync is not configured');
-  const { error } = await c.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href.split('#')[0] } });
+  const { data, error } = await c.auth.signUp({ email, password, options: { emailRedirectTo: appUrl() } });
+  if (error) throw error;
+  // Supabase hides whether an address is already registered: an existing, confirmed user comes back with no identities.
+  if (data.user && data.user.identities?.length === 0) throw new Error('already-registered');
+  return Boolean(data.session);
+}
+
+export async function signInWithPassword(email: string, password: string) {
+  const c = getClient();
+  if (!c) throw new Error('Sync is not configured');
+  const { error } = await c.auth.signInWithPassword({ email, password });
   if (error) throw error;
 }
 
-/** Sign in with the 6-digit code from the email (works inside home-screen apps, where links open in the browser instead). */
-export async function verifyCode(email: string, token: string) {
+export async function sendPasswordReset(email: string) {
   const c = getClient();
   if (!c) throw new Error('Sync is not configured');
-  const { error } = await c.auth.verifyOtp({ email, token: token.replace(/\s/g, ''), type: 'email' });
+  const { error } = await c.auth.resetPasswordForEmail(email, { redirectTo: appUrl() });
   if (error) throw error;
+}
+
+export async function updatePassword(password: string) {
+  const c = getClient();
+  if (!c) throw new Error('Sync is not configured');
+  const { error } = await c.auth.updateUser({ password });
+  if (error) throw error;
+  clearRecovery();
 }
 
 export async function signOut() {

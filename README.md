@@ -45,10 +45,11 @@ Without sync, data stays on the device. To share it between a household tablet a
 1. Create a free project at [supabase.com](https://supabase.com). Pick an **EU region** for European users.
 2. Open **SQL Editor**, paste [`supabase/schema.sql`](supabase/schema.sql) and run it. (Projects set up with an earlier version also need [`supabase/002_grants.sql`](supabase/002_grants.sql).)
 3. Under **Authentication → URL Configuration**, set *Site URL* to the hosted app and add `<app URL>/**` to *Redirect URLs*.
-4. Under **Authentication → Emails → Magic Link**, add `{{ .Token }}` to the template so the email includes a 6-digit code. Home-screen apps on iPhone/iPad must sign in with the code, because links open in Safari instead of the app.
-5. Under **Project Settings → API**, copy the *Project URL* and the *publishable* key into `.env.production` before building. This repo's `.env.production` already points at the household's project. Publishable keys are public by design; never commit a secret/service_role key.
-6. On the **tablet**: complete the first-run setup, then go to **Settings**, sign in with email (magic link) and choose **Create household**. Note the join code.
-7. On each **phone**: on the first screen tap **Join a household**, sign in, and enter the join code. The puppy, country and breed come from the household.
+4. Under **Project Settings → API**, copy the *Project URL* and the *publishable* key into `.env.production` before building. This repo's `.env.production` already points at the household's project. Publishable keys are public by design; never commit a secret/service_role key.
+5. On the **tablet**: complete the first-run setup, then go to **Settings → Create account** (email + password). Open the confirmation email in any browser, come back, **Sign in**, and choose **Create household**. Note the join code.
+6. On each **phone**: on the first screen tap **Join a household**, create an account (or sign in), and enter the join code. The puppy, country and breed come from the household.
+
+Sign-in uses email + password rather than magic links: on iPhone/iPad, links from email open in Safari, not in a home-screen app. The only emails are the one-time confirmation and password resets, and those can be opened in any browser.
 
 Every change is saved on the device first and then synced live. If two people edit the same item, the most recent edit wins.
 
