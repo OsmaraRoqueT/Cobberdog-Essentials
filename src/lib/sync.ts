@@ -79,6 +79,14 @@ export async function sendMagicLink(email: string) {
   if (error) throw error;
 }
 
+/** Sign in with the 6-digit code from the email (works inside home-screen apps, where links open in the browser instead). */
+export async function verifyCode(email: string, token: string) {
+  const c = getClient();
+  if (!c) throw new Error('Sync is not configured');
+  const { error } = await c.auth.verifyOtp({ email, token: token.replace(/\s/g, ''), type: 'email' });
+  if (error) throw error;
+}
+
 export async function signOut() {
   await getClient()?.auth.signOut();
   saveHousehold(null);

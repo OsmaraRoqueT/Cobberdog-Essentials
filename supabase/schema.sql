@@ -73,6 +73,18 @@ begin
   return h;
 end $$;
 
+-- API permissions: signed-in users only; RLS above limits them to their household.
+grant usage on schema public to authenticated;
+grant select on households, household_members to authenticated;
+grant select, insert, update on records to authenticated;
+revoke all on households, household_members, records from anon;
+revoke execute on function is_member(uuid) from public, anon;
+revoke execute on function create_household(text) from public, anon;
+revoke execute on function join_household(text) from public, anon;
+grant execute on function is_member(uuid) to authenticated;
+grant execute on function create_household(text) to authenticated;
+grant execute on function join_household(text) to authenticated;
+
 -- Live updates between household members.
 do $$ begin
   alter publication supabase_realtime add table records;

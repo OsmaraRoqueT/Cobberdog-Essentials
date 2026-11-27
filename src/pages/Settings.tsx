@@ -158,6 +158,8 @@ function SyncCard() {
   const [url, setUrl] = useState(cfg?.url ?? '');
   const [key, setKey] = useState(cfg?.anonKey ?? '');
   const [email, setEmail] = useState('');
+  const [sent, setSent] = useState(false);
+  const [otp, setOtp] = useState('');
   const [hhName, setHhName] = useState(t('settings.householdDefault'));
   const [code, setCode] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
@@ -209,6 +211,7 @@ function SyncCard() {
             e.preventDefault();
             void run(async () => {
               await sync.sendMagicLink(email.trim());
+              setSent(true);
               setMsg(t('settings.checkEmail', { email: email.trim() }));
             });
           }}
@@ -216,8 +219,28 @@ function SyncCard() {
           <Field label={t('settings.email')} hint={t('settings.emailHint')}>
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
-          <button className="btn btn-primary" disabled={busy}>
+          <button className={`btn ${sent ? '' : 'btn-primary'}`} disabled={busy}>
             {t('settings.sendLink')}
+          </button>
+        </form>
+      )}
+
+      {cfg && syncStatus === 'signed-out' && sent && (
+        <form
+          className="form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void run(async () => {
+              await sync.verifyCode(email.trim(), otp);
+              await refreshSync();
+            });
+          }}
+        >
+          <Field label={t('settings.code')} hint={t('settings.codeHint')}>
+            <input inputMode="numeric" autoComplete="one-time-code" required value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="123456" />
+          </Field>
+          <button className="btn btn-primary" disabled={busy || otp.replace(/\s/g, '').length < 6}>
+            {t('settings.verifyCode')}
           </button>
         </form>
       )}
