@@ -41,7 +41,7 @@ Without sync, data stays on the device. To share it between a household tablet a
 1. Create a free project at [supabase.com](https://supabase.com). Pick an **EU region** for European users.
 2. Open **SQL Editor**, paste [`supabase/schema.sql`](supabase/schema.sql) and run it.
 3. Under **Authentication → URL Configuration**, add the hosted app URL to *Redirect URLs*.
-4. Under **Project Settings → API**, copy the *Project URL* and *anon public* key into `.env.local` (see `.env.example`) before building.
+4. Under **Project Settings → API**, copy the *Project URL* and the *publishable* key into `.env.production` before building. This repo's `.env.production` already points at the household's project. Publishable keys are public by design; never commit a secret/service_role key.
 5. On the **tablet**: complete the first-run setup, then go to **Settings**, sign in with email (magic link) and choose **Create household**. Note the join code.
 6. On each **phone**: on the first screen tap **Join a household**, sign in, and enter the join code. The puppy, country and breed come from the household.
 
