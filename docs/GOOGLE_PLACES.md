@@ -1,4 +1,8 @@
-# Switching on the vet finder (Google Maps)
+# Optional upgrade: in-app clinic search (Google Places)
+
+**Not in use.** The app's vet finder uses the free "Search in Google Maps" link, and owners add the clinics they want to compare. Everything below is only needed to show clinics, reviews and maps *inside* the app. That needs a Google Cloud account with billing and is switched off by default.
+
+To switch it on later, follow these steps, then add `VITE_PLACES_ENABLED=true` to `.env.production`.
 
 The vet finder uses Google Maps Platform. Two keys keep the bill and the risk under control:
 

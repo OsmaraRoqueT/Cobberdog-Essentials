@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Field } from '../components/ui';
 import { useI18n, type MessageKey } from '../i18n';
 import { uid } from '../lib/merge';
-import { embedUrl, mapsPlaceLink, mapsSearchLink, placeDetails, PlacesError, searchVets, type PlaceDetails, type SearchResult } from '../lib/places';
+import { embedUrl, mapsPlaceLink, mapsSearchLink, placeDetails, PlacesError, PLACES_ENABLED, searchVets, type PlaceDetails, type SearchResult } from '../lib/places';
 import { getProfile, PROFILE_ID, useCollection, useStore } from '../lib/store';
 import type { Note, Profile, Tri } from '../types';
 import { todayStr } from '../lib/health';
@@ -24,6 +24,101 @@ export function MapFrame({ src, title }: { src: string | null; title: string }) 
 }
 
 export function VetFinder() {
+  return PLACES_ENABLED ? <PlacesFinder /> : <MapsFinder />;
+}
+
+/** Free: search in Google Maps (app or web), then add the clinics you want to compare. */
+function MapsFinder() {
+  const { t, lang } = useI18n();
+  const { data, upsert } = useStore();
+  const profile = getProfile(data);
+  const [postcode, setPostcode] = useState(profile?.postcode ?? '');
+  const blank = { name: '', phone: '', website: '', address: '', mapsUrl: '' };
+  const [c, setC] = useState(blank);
+  const [added, setAdded] = useState<string | null>(null);
+  const keyword = lang === 'nb' ? 'veterinær' : 'vet';
+  const pc = postcode.trim();
+
+  const savePostcode = () => {
+    if (!pc || pc === profile?.postcode) return;
+    const base: Profile = profile ?? { id: PROFILE_ID, updatedAt: '', name: '', breeder: '', birthDate: '', arrivalDate: '', size: '', colour: '', microchip: '', notes: '' };
+    upsert('profile', { ...base, postcode: pc });
+  };
+  const field = (k: keyof typeof blank) => ({ value: c[k], onChange: (e: { target: { value: string } }) => setC({ ...c, [k]: e.target.value }) });
+
+  return (
+    <section className="card form">
+      <h2>🔎 {t('vet.finderTitle')}</h2>
+      <p className="muted small">{t('vet.mapsIntro')}</p>
+      <div className="finder-row two">
+        <Field label={t('vet.postcode')}>
+          <input {...{ value: postcode, onChange: (e) => setPostcode(e.target.value) }} onBlur={savePostcode} autoComplete="postal-code" placeholder="0150" />
+        </Field>
+        <a
+          className={`btn btn-primary center align-end ${pc ? '' : 'disabled'}`}
+          aria-disabled={!pc}
+          href={pc ? mapsSearchLink(`${keyword} ${pc}`) : undefined}
+          target="_blank"
+          rel="noreferrer"
+          onClick={savePostcode}
+        >
+          🗺️ {t('vet.openSearch')}
+        </a>
+      </div>
+
+      <form
+        className="form card-inset"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const name = c.name.trim();
+          if (!name) return;
+          upsert('notes', {
+            id: uid(),
+            updatedAt: '',
+            kind: 'option',
+            category: 'vet',
+            title: name,
+            provider: name,
+            body: '',
+            decision: 'considering',
+            contact: c.phone.trim() || undefined,
+            link: c.website.trim() || undefined,
+            address: c.address.trim() || undefined,
+            mapsUrl: c.mapsUrl.trim() || undefined,
+            emergency: 'unknown',
+            fearFree: 'unknown',
+          });
+          setAdded(name);
+          setC(blank);
+        }}
+      >
+        <h3>{t('vet.addFound')}</h3>
+        <Field label={t('vet.clinicName')}>
+          <input required {...field('name')} />
+        </Field>
+        <div className="grid-2">
+          <Field label={t('vet.phone')}>
+            <input type="tel" {...field('phone')} />
+          </Field>
+          <Field label={t('common.website')}>
+            <input type="url" placeholder="https://" {...field('website')} />
+          </Field>
+        </div>
+        <Field label={t('vet.address')}>
+          <input {...field('address')} />
+        </Field>
+        <Field label={t('vet.mapsLink')} hint={t('vet.mapsLinkHint')}>
+          <input type="url" placeholder="https://maps.app.goo.gl/…" {...field('mapsUrl')} />
+        </Field>
+        <button className="btn btn-primary">{t('vet.addClinic')}</button>
+        {added && <p className="notice">{t('vet.added', { name: added })}</p>}
+      </form>
+    </section>
+  );
+}
+
+/** Paid upgrade: in-app search through the "places" Edge Function. */
+function PlacesFinder() {
   const { t, lang } = useI18n();
   const { data, upsert } = useStore();
   const profile = getProfile(data);
@@ -212,6 +307,11 @@ export function VetScorecard({ note }: { note: Note }) {
       {(!note.emergency || note.emergency === 'unknown' || !note.fearFree || note.fearFree === 'unknown' || (insurer && (note.settlement?.[insurerName] ?? 'unknown') === 'unknown')) && (
         <CallPrompt note={note} insurerName={insurerName} />
       )}
+      {!note.placeId && (
+        <a href={note.mapsUrl || mapsSearchLink([note.provider || note.title, note.address].filter(Boolean).join(' '))} target="_blank" rel="noreferrer">
+          ⭐ {t('vet.seeReviews')}
+        </a>
+      )}
       {note.placeId && (
         <button className="link-btn" onClick={() => setOpen(!open)}>
           {open ? t('vet.hideReviews') : `⭐ ${t('vet.showReviews')}`}
@@ -333,9 +433,12 @@ export function VetFields({ note, update }: { note: Note; update: (patch: Partia
         <TriSelect label={`🚨 ${t('vet.emergency')}`} value={note.emergency} onChange={(v) => answer({ emergency: v })} />
         <TriSelect label={`🤝 ${t('vet.fearFree')}`} value={note.fearFree} onChange={(v) => answer({ fearFree: v })} />
       </div>
+      <Field label={t('vet.address')}>
+        <input value={note.address ?? ''} onChange={(e) => set('address', e.target.value)} />
+      </Field>
       <div className="grid-2">
-        <Field label={t('vet.address')}>
-          <input value={note.address ?? ''} onChange={(e) => set('address', e.target.value)} />
+        <Field label={t('vet.mapsLink')}>
+          <input type="url" value={note.mapsUrl ?? ''} onChange={(e) => set('mapsUrl', e.target.value || undefined)} placeholder="https://maps.app.goo.gl/…" />
         </Field>
         <Field label={`${t('vet.distance')} (km)`}>
           <input

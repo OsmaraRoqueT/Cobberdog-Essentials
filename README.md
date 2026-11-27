@@ -12,7 +12,7 @@ It's an installable web app (PWA) that works offline on phones and tablets and c
 | **Health** | Vaccinations, worming, flea/tick, vet visits, grooming, medication and weight. Includes a **suggested schedule** built from birth and pickup dates and the country's seasonal rules, plus repeating reminders and **Add to calendar** (phone `.ics` or Google Calendar) |
 | **Shopping** | Puppy items with priorities and tips. Country admin items (e.g. Dyreidentitet in Norway) and breed items are added automatically |
 | **Training** | 16 skills with how-to steps and a status, a session log, and a socialisation checklist |
-| **Knowledge** | Research notes plus **options** for comparing courses and more. **Vet finder**: post code → nearest clinics (Google Maps), evaluate them with a scorecard (direct settlement with your insurer, distance, emergency cover, Google rating, calm handling) and live Google reviews. **Insurance comparison**: the insurers in your country, side by side on a 14-point checklist you fill in from their quotes |
+| **Knowledge** | Research notes plus **options** for comparing courses and more. **Vet finder**: post code → search in Google Maps, add the clinics you like (with their Google Maps link for reviews), then call each one: the card shows the open questions and a scorecard (direct settlement with your insurer, distance, emergency cover, calm handling). **Insurance comparison**: the insurers in your country, side by side on a 14-point checklist you fill in from their quotes |
 | **Settings** | Language (per device), country, breed and currency (per household), a keep-screen-on mode for wall/kitchen tablets, household sync, and backup |
 
 On screens 900px and wider (tablets, desktops) the layout switches to a side menu with a two-column dashboard.
@@ -55,7 +55,7 @@ Every change is saved on the device first and then synced live. If two people ed
 
 ## Vet finder (Google Maps)
 
-See [docs/GOOGLE_PLACES.md](docs/GOOGLE_PLACES.md) to switch it on: a Google Cloud key stored as a Supabase secret, plus the `places` Edge Function in `supabase/functions/places/`. Until then the app offers a "search in Google Maps" link and clinics can be added by hand.
+Free by default: the app opens a Google Maps search for vets near the post code, and owners add the clinics they want to compare. An in-app search with live reviews (Google Places, needs a Google Cloud billing account) is built but switched off; see [docs/GOOGLE_PLACES.md](docs/GOOGLE_PLACES.md) and `supabase/functions/places/`.
 
 ## Content packs
 

@@ -69,6 +69,9 @@ export function placeDetails(placeId: string, lang: string): Promise<PlaceDetail
   return detailCache.get(key)!;
 }
 
+/** In-app clinic search (Google Places, paid) is optional. Off unless VITE_PLACES_ENABLED=true; see docs/GOOGLE_PLACES.md. */
+export const PLACES_ENABLED = import.meta.env.VITE_PLACES_ENABLED === 'true';
+
 export const EMBED_KEY = import.meta.env.VITE_GOOGLE_MAPS_EMBED_KEY as string | undefined;
 
 /** Google Maps Embed API URL (free, no usage cost). Returns null when no browser key is configured. */

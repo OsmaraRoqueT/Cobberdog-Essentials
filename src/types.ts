@@ -45,6 +45,8 @@ export interface Note extends Base {
 
   // Vet clinics (found via Google Places). Only the place id is Google's; other fields are the owner's own record.
   placeId?: string;
+  /** The clinic's Google Maps link (pasted by the owner), for reviews and directions. */
+  mapsUrl?: string;
   address?: string;
   distanceKm?: number;
   emergency?: Tri;
