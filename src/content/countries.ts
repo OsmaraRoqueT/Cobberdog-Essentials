@@ -28,6 +28,14 @@ const NO: Country = {
   code: 'NO',
   currency: 'NOK',
   pack: {
+    options: [
+      { provider: "Tryg", category: 'insurance', link: 'https://www.tryg.no' },
+      { provider: "If", category: 'insurance', link: 'https://www.if.no' },
+      { provider: "Agria Dyreforsikring", category: 'insurance', link: 'https://www.agria.no' },
+      { provider: "Gjensidige", category: 'insurance', link: 'https://www.gjensidige.no' },
+      { provider: "Fremtind (SpareBank 1 / DNB)", category: 'insurance', link: 'https://www.fremtind.no' },
+    ],
+    insuranceNote: { title: { en: "Norway: independent comparisons", nb: "Norge: uavhengige sammenligninger" }, category: 'insurance', body: { en: "Norsk Familieøkonomi rates dog insurance every year (shown on sites such as forsikringsduden.no and dyreguiden.no). Forbrukerrådet’s finansportalen.no compares insurance prices. In Norway, check whether your chosen vet offers direct settlement (direkte oppgjør) with the insurer, so you pay only the excess at the clinic.", nb: "Norsk Familieøkonomi vurderer hundeforsikringer hvert år (vises bl.a. på forsikringsduden.no og dyreguiden.no). Forbrukerrådets finansportalen.no sammenligner forsikringspriser. Sjekk om veterinæren du velger har direkte oppgjør med forsikringsselskapet, så du bare betaler egenandelen på klinikken." } },
     shopping: admin([
       {
         category: adminCat,
@@ -95,6 +103,13 @@ const SE: Country = {
   code: 'SE',
   currency: 'SEK',
   pack: {
+    options: [
+      { provider: "Agria", category: 'insurance', link: 'https://www.agria.se' },
+      { provider: "If", category: 'insurance', link: 'https://www.if.se' },
+      { provider: "Folksam", category: 'insurance', link: 'https://www.folksam.se' },
+      { provider: "Trygg-Hansa", category: 'insurance', link: 'https://www.trygghansa.se' },
+    ],
+    insuranceNote: { title: { en: "Sweden: independent comparisons", nb: "Sverige: uavhengige sammenligninger" }, category: 'insurance', body: { en: "Konsumenternas Försäkringsbyrå (konsumenternas.se) compares dog insurance terms independently. Agria is part of the Länsförsäkringar group.", nb: "Konsumenternas Försäkringsbyrå (konsumenternas.se) sammenligner vilkår uavhengig. Agria er en del av Länsförsäkringar-gruppen." } },
     shopping: admin([
       {
         category: adminCat,
@@ -130,6 +145,13 @@ const DK: Country = {
   code: 'DK',
   currency: 'DKK',
   pack: {
+    options: [
+      { provider: "Tryg", category: 'insurance', link: 'https://www.tryg.dk' },
+      { provider: "Agria", category: 'insurance', link: 'https://www.agria.dk' },
+      { provider: "Codan", category: 'insurance', link: 'https://www.codan.dk' },
+      { provider: "Alm. Brand", category: 'insurance', link: 'https://www.almbrand.dk' },
+    ],
+    insuranceNote: { title: { en: "Denmark: independent comparisons", nb: "Danmark: uavhengige sammenligninger" }, category: 'insurance', body: { en: "Tænk (taenk.dk) tests Danish dog insurance; prices differed by up to 2.5× in its latest test. Liability insurance for dogs is mandatory in Denmark; health insurance is optional.", nb: "Tænk (taenk.dk) tester danske hundeforsikringer; prisene varierte opptil 2,5 ganger i siste test. Ansvarsforsikring for hund er påbudt i Danmark; sykeforsikring er frivillig." } },
     shopping: admin([
       {
         category: adminCat,
@@ -155,6 +177,13 @@ const FI: Country = {
   code: 'FI',
   currency: 'EUR',
   pack: {
+    options: [
+      { provider: "If", category: 'insurance', link: 'https://www.if.fi' },
+      { provider: "LähiTapiola", category: 'insurance', link: 'https://www.lahitapiola.fi' },
+      { provider: "Pohjola Vakuutus (OP)", category: 'insurance', link: 'https://www.op.fi' },
+      { provider: "Fennia", category: 'insurance', link: 'https://www.fennia.fi' },
+    ],
+    insuranceNote: { title: { en: "Finland: comparing insurers", nb: "Finland: sammenligne forsikringer" }, category: 'insurance', body: { en: "Request quotes with the same deductible and compensation limits from each insurer: published price comparisons in Finland are often out of date.", nb: "Be om tilbud med samme egenandel og erstatningsgrense fra hvert selskap: publiserte prissammenligninger i Finland er ofte utdaterte." } },
     shopping: admin([
       {
         category: adminCat,
@@ -187,6 +216,13 @@ const GB: Country = {
   code: 'GB',
   currency: 'GBP',
   pack: {
+    options: [
+      { provider: "Petplan", category: 'insurance', link: 'https://www.petplan.co.uk' },
+      { provider: "Agria", category: 'insurance', link: 'https://www.agriapet.co.uk' },
+      { provider: "ManyPets", category: 'insurance', link: 'https://manypets.com' },
+      { provider: "Direct Line", category: 'insurance', link: 'https://www.directline.com' },
+    ],
+    insuranceNote: { title: { en: "UK: independent comparisons", nb: "Storbritannia: uavhengige sammenligninger" }, category: 'insurance', body: { en: "Which? (which.co.uk) compares dog insurance policies feature by feature. Check whether cover is lifetime (resets yearly) or per-condition, and when co-payments start for older dogs.", nb: "Which? (which.co.uk) sammenligner hundeforsikringer punkt for punkt. Sjekk om dekningen er livsvarig (nullstilles årlig) eller per lidelse, og når egenandel i prosent starter for eldre hunder." } },
     shopping: admin([
       {
         category: adminCat,
@@ -214,6 +250,13 @@ const US: Country = {
   code: 'US',
   currency: 'USD',
   pack: {
+    options: [
+      { provider: "Trupanion", category: 'insurance', link: 'https://www.trupanion.com' },
+      { provider: "Nationwide", category: 'insurance', link: 'https://www.petinsurance.com' },
+      { provider: "Healthy Paws", category: 'insurance', link: 'https://www.healthypawspetinsurance.com' },
+      { provider: "ASPCA Pet Health Insurance", category: 'insurance', link: 'https://www.aspcapetinsurance.com' },
+    ],
+    insuranceNote: { title: { en: "US: independent comparisons", nb: "USA: uavhengige sammenligninger" }, category: 'insurance', body: { en: "Consumer Reports and NerdWallet compare US pet insurers. Most reimburse you after you pay the vet; ask which offer direct vet payment.", nb: "Consumer Reports og NerdWallet sammenligner amerikanske dyreforsikringer. De fleste refunderer etter at du har betalt; spør hvem som betaler veterinæren direkte." } },
     shopping: admin([
       {
         category: adminCat,
@@ -242,6 +285,12 @@ const AU: Country = {
   code: 'AU',
   currency: 'AUD',
   pack: {
+    options: [
+      { provider: "RSPCA Pet Insurance", category: 'insurance', link: 'https://www.rspcapetinsurance.org.au' },
+      { provider: "Bow Wow Meow", category: 'insurance', link: 'https://www.bowwowmeow.com.au' },
+      { provider: "Knose", category: 'insurance', link: 'https://www.knose.com.au' },
+    ],
+    insuranceNote: { title: { en: "Australia: independent comparisons", nb: "Australia: uavhengige sammenligninger" }, category: 'insurance', body: { en: "Choice, Canstar and Finder compare Australian pet insurance. Several brands share the same underwriter, so compare limits, excess, waiting periods and breed exclusions in each Product Disclosure Statement.", nb: "Choice, Canstar og Finder sammenligner dyreforsikring i Australia. Flere merker har samme forsikringsgiver, så sammenlign grenser, egenandel, karenstid og raseunntak i vilkårene." } },
     shopping: admin([
       {
         category: adminCat,

@@ -266,7 +266,7 @@ export const generic: ContentPack = {
     },
     {
       title: { en: 'Pet insurance: comparison checklist', nb: 'Dyreforsikring: sjekkliste for sammenligning' },
-      category: 'admin',
+      category: 'insurance',
       body: {
         en: `• Waiting periods (accident vs illness), so start cover before or on pickup day
 • Annual limit and sub-limits

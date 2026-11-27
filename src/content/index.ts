@@ -49,7 +49,7 @@ export function buildSeed({ lang, country, breed }: SeedOptions): Collections {
           status: 'todo',
           tip: i.tip && pick(i.tip, lang),
         });
-    for (const n of pack.notes ?? [])
+    for (const n of [...(pack.notes ?? []), ...(pack.insuranceNote ? [pack.insuranceNote] : [])])
       push(out.notes, {
         id: `seed-note-${slug(n.title.en)}`,
         updatedAt: SEED_TIME,
@@ -58,6 +58,18 @@ export function buildSeed({ lang, country, breed }: SeedOptions): Collections {
         kind: 'note',
         body: pick(n.body, lang),
         pinned: n.pinned,
+      });
+    for (const o of pack.options ?? [])
+      push(out.notes, {
+        id: `seed-opt-${o.category}-${slug(o.provider)}`,
+        updatedAt: SEED_TIME,
+        title: o.provider,
+        provider: o.provider,
+        category: o.category,
+        kind: 'option',
+        body: '',
+        link: o.link,
+        decision: 'considering',
       });
     for (const g of pack.skills ?? [])
       for (const s of g.items)
