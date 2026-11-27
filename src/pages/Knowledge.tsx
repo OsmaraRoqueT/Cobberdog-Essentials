@@ -4,13 +4,15 @@ import { uid } from '../lib/merge';
 import { useI18n, type MessageKey } from '../i18n';
 import { useCollection, useStore } from '../lib/store';
 import { NOTE_CATEGORIES, type Decision, type Note, type NoteCategory } from '../types';
+import { InsuranceCompare } from './Insurance';
+import { VetFields, VetFinder, VetScorecard } from './Vets';
 
 const DECISION_ORDER: Record<Decision, number> = { chosen: 0, considering: 1, rejected: 2 };
 
-export default function Knowledge() {
+export default function Knowledge({ initialCat }: { initialCat?: string }) {
   const notes = useCollection('notes');
   const { t } = useI18n();
-  const [cat, setCat] = useState<NoteCategory | 'All'>('All');
+  const [cat, setCat] = useState<NoteCategory | 'All'>(() => ((NOTE_CATEGORIES as readonly string[]).includes(initialCat ?? '') ? (initialCat as NoteCategory) : 'All'));
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState<Note | null>(null);
 
@@ -21,8 +23,9 @@ export default function Knowledge() {
       const hay = [n.title, n.body, n.provider, n.pros, n.cons, n.contact].join(' ').toLowerCase();
       return hay.includes(q.toLowerCase());
     });
+  // Insurers live in the comparison table, not as cards.
   const options = matches
-    .filter((n) => n.kind === 'option')
+    .filter((n) => n.kind === 'option' && n.category !== 'insurance')
     .sort((a, b) => DECISION_ORDER[a.decision ?? 'considering'] - DECISION_ORDER[b.decision ?? 'considering'] || (b.rating ?? 0) - (a.rating ?? 0));
   const plain = matches
     .filter((n) => n.kind === 'note')
@@ -60,6 +63,19 @@ export default function Knowledge() {
           </button>
         ))}
       </div>
+
+      {cat === 'vet' && <VetFinder />}
+      {cat === 'insurance' && <InsuranceCompare />}
+      {cat === 'All' && !q && (
+        <div className="row-gap">
+          <button className="btn btn-small" onClick={() => setCat('vet')}>
+            🔎 {t('vet.finderTitle')}
+          </button>
+          <button className="btn btn-small" onClick={() => setCat('insurance')}>
+            🛡️ {t('ins.compareTitle')}
+          </button>
+        </div>
+      )}
 
       {options.length > 0 && (
         <section>
@@ -159,6 +175,7 @@ function OptionCard({ note, onEdit }: { note: Note; onEdit: () => void }) {
           </>
         )}
       </dl>
+      {note.category === 'vet' && <VetScorecard note={note} />}
       {note.body && (
         <p className="note-body">
           <Linkified text={note.body} />
@@ -247,6 +264,7 @@ function NoteSheet({ note, isNew, onClose }: { note: Note; isNew: boolean; onClo
             <Field label={t('kb.cons')}>
               <textarea rows={3} value={n.cons ?? ''} onChange={(e) => set('cons', e.target.value)} />
             </Field>
+            {n.category === 'vet' && <VetFields note={n} set={set} />}
           </>
         )}
         <Field label={isOption ? t('common.notes') : t('kb.content')} hint={t('kb.linksHint')}>

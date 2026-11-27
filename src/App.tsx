@@ -23,7 +23,7 @@ export type TabId = (typeof TABS)[number]['id'];
 
 function readTab(): TabId {
   if (isRecovery()) return 'settings';
-  const h = window.location.hash.replace('#', '');
+  const h = window.location.hash.replace('#', '').split('/')[0];
   return (TABS.find((t) => t.id === h)?.id ?? 'home') as TabId;
 }
 
@@ -53,8 +53,8 @@ export default function App() {
     document.title = appName;
   }, [appName]);
 
-  const go = (target: TabId) => {
-    window.location.hash = target;
+  const go = (target: TabId, sub?: string) => {
+    window.location.hash = sub ? `${target}/${sub}` : target;
     window.scrollTo(0, 0);
   };
 
@@ -81,7 +81,7 @@ export default function App() {
         {tab === 'home' && <Home go={go} />}
         {tab === 'health' && <Health />}
         {tab === 'shopping' && <Shopping />}
-        {tab === 'knowledge' && <Knowledge />}
+        {tab === 'knowledge' && <Knowledge key={window.location.hash} initialCat={window.location.hash.split('/')[1]} />}
         {tab === 'training' && <Training />}
         {tab === 'settings' && <Settings />}
       </main>

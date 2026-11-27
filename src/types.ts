@@ -22,9 +22,10 @@ export interface ShoppingItem extends Base {
 }
 
 /** Category keys are stable ids; labels come from the translation dictionary. */
-export const NOTE_CATEGORIES = ['breed', 'vet', 'course', 'breeder', 'food', 'grooming', 'admin', 'tips'] as const;
+export const NOTE_CATEGORIES = ['breed', 'vet', 'insurance', 'course', 'breeder', 'food', 'grooming', 'admin', 'tips'] as const;
 export type NoteCategory = (typeof NOTE_CATEGORIES)[number];
 export type Decision = 'considering' | 'chosen' | 'rejected';
+export type Tri = 'yes' | 'no' | 'unknown';
 
 /** A note is either plain research ("note") or a provider you're comparing ("option"). */
 export interface Note extends Base {
@@ -41,6 +42,18 @@ export interface Note extends Base {
   cons?: string;
   decision?: Decision;
   rating?: number;
+
+  // Vet clinics (found via Google Places). Only the place id is Google's; other fields are the owner's own record.
+  placeId?: string;
+  address?: string;
+  distanceKm?: number;
+  emergency?: Tri;
+  fearFree?: Tri;
+  /** Direct settlement (direkte oppgjør) with each insurer, keyed by insurer name. */
+  settlement?: Record<string, Tri>;
+
+  // Insurance options: answers to the comparison checklist, keyed by criterion id.
+  answers?: Record<string, string>;
 }
 
 export type SkillStatus = 'not-started' | 'learning' | 'practising' | 'reliable';
@@ -90,6 +103,8 @@ export interface Profile extends Base {
   country?: string;
   breed?: string;
   currency?: string;
+  /** Used to find nearby vets. */
+  postcode?: string;
   name: string;
   breeder: string;
   birthDate: string;

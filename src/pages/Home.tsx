@@ -17,7 +17,7 @@ export function formatMoney(amount: number, currency: string, locale?: string) {
   }
 }
 
-export default function Home({ go }: { go: (t: TabId) => void }) {
+export default function Home({ go }: { go: (t: TabId, sub?: string) => void }) {
   const { t, locale } = useI18n();
   const { data, upsert } = useStore();
   const profile = getProfile(data);
@@ -36,6 +36,7 @@ export default function Home({ go }: { go: (t: TabId) => void }) {
   const chosen = (cat: string) => notes.find((n) => n.category === cat && n.kind === 'option' && n.decision === 'chosen');
   const vet = chosen('vet');
   const course = chosen('course');
+  const insurer = chosen('insurance');
   const reliable = skills.filter((s) => s.status === 'reliable').length;
   const upcoming = health
     .filter((h) => h.status === 'planned' && h.due)
@@ -110,13 +111,19 @@ export default function Home({ go }: { go: (t: TabId) => void }) {
         <ul className="plain-list">
           <li>
             <span>{t('home.vet')}</span>
-            <button className="link-btn" onClick={() => go('knowledge')}>
+            <button className="link-btn" onClick={() => go('knowledge', 'vet')}>
               {vet ? vet.provider || vet.title : t('home.notChosen')}
             </button>
           </li>
           <li>
+            <span>{t('home.insurance')}</span>
+            <button className="link-btn" onClick={() => go('knowledge', 'insurance')}>
+              {insurer ? insurer.provider || insurer.title : t('home.notChosen')}
+            </button>
+          </li>
+          <li>
             <span>{t('home.course')}</span>
-            <button className="link-btn" onClick={() => go('knowledge')}>
+            <button className="link-btn" onClick={() => go('knowledge', 'course')}>
               {course ? course.provider || course.title : t('home.notChosen')}
             </button>
           </li>
